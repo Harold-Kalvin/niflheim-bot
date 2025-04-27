@@ -1,0 +1,60 @@
+[project]
+name = "niflheim-bot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "discord-py>=2.5.2",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.11.7",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["app"]
+
+[tool.ruff.lint]
+# rules can be found here: https://docs.astral.sh/ruff/rules/
+select = [
+    "F",    # pyflakes
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "I",    # isort
+    "ERA",  # eradicate
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "T10",  # flake8-django
+    "T20",  # flake8-print
+    "B",    # flake8-bugbear
+    "G",    # flake8-logging-format
+    "RUF"   # Ruff-specific rules
+]
+
+# allow `isort` fixes when `--fix` is provided
+fixable = ["I"]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = [
+    "E402"     # import violations
+]
+"**/migrations/*.py" = [
+    "RUF012",   # mutable-class-default
+    "E501"      # line-too-long  (remove when ruff supports formatting long strings)
+]
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = true
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
