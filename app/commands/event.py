@@ -2,7 +2,7 @@ import asyncio
 import logging
 from datetime import UTC, datetime
 
-from discord import Color, Embed, Interaction, TextChannel
+from discord import Client, Color, Embed, Interaction, TextChannel
 from discord.ui import Button, View
 
 emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
@@ -75,7 +75,7 @@ class TeamSelectionView(View):
         return callback
 
 
-async def event_command(interaction: Interaction, client):
+async def event_command(interaction: Interaction, client: Client):
     await interaction.response.defer()
 
     user = interaction.user
@@ -140,13 +140,11 @@ async def event_command(interaction: Interaction, client):
     if start and end:
         start_unix = int(start.timestamp())
         end_unix = int(end.timestamp())
-        value = (
-            f"From: <t:{start_unix}:F> (<t:{start_unix}:R>)\n"
-            f"To: <t:{end_unix}:F> (<t:{end_unix}:R>)"
+        embed.add_field(
+            name="From: ", value=f"<t:{start_unix}:F> (<t:{start_unix}:R>)", inline=False
         )
-        embed.add_field(name="**Event Duration:**", value=value, inline=False)
+        embed.add_field(name="To: ", value=f"<t:{end_unix}:F> (<t:{end_unix}:R>)", inline=False)
 
-    embed.add_field(name="**Teams:**", value="", inline=False)
     for idx, (team_name, max_participants, _) in enumerate(teams):
         embed.add_field(
             name=f"{emojis[idx]} {team_name} (0/{max_participants})", value="", inline=True

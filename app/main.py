@@ -17,7 +17,7 @@ async def on_ready():
     await client.tree.sync()
 
 
-@client.tree.command(name="event", description="Create a simple poll")
+@client.tree.command(name="event", description="Plan an event's teams")
 async def event(interaction: Interaction):
     await event_command(interaction, client)
 
