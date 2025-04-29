@@ -3,7 +3,7 @@ import os
 from discord import Intents, Interaction
 from discord.ext import commands
 
-from commands.event import event_command
+from commands.event.command import event_command
 
 TOKEN = os.environ["DISCORD_TOKEN"]
 
