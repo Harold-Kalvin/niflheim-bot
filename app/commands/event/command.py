@@ -4,7 +4,8 @@ from datetime import UTC, datetime
 from discord import Client, Embed, Interaction, Message, TextChannel
 
 from commands.event.components import TeamSelectionView
-from constants import NUMBER_EMOJIS, PRIMARY_COLOR
+from commands.event.entities import Team
+from constants import PRIMARY_COLOR
 
 
 def _parse_date_range(input: str) -> tuple[datetime | None, datetime | None]:
@@ -17,11 +18,13 @@ def _parse_date_range(input: str) -> tuple[datetime | None, datetime | None]:
     return start, end
 
 
-def _parse_teams(input: str):
+def _parse_teams(input: str) -> list[Team]:
     teams = []
-    for team_str in input.split(","):
-        team_name, max_participant = team_str.split("/")
-        teams.append([team_name.strip(), int(max_participant.strip()), []])
+    for id, team_str in enumerate(input.split(",")):
+        team_name, max_members = team_str.split("/")
+        teams.append(
+            Team(id=id, name=team_name.strip(), max_members=int(max_members.strip()), members=[])
+        )
     return teams
 
 
@@ -84,10 +87,8 @@ async def event_command(interaction: Interaction, client: Client):
         )
         embed.add_field(name="To: ", value=f"<t:{end_unix}:F> (<t:{end_unix}:R>)", inline=False)
 
-    for idx, (team_name, max_participants, _) in enumerate(teams):
-        embed.add_field(
-            name=f"{NUMBER_EMOJIS[idx]} {team_name} (0/{max_participants})", value="", inline=True
-        )
+    for team in teams:
+        embed.add_field(name=team.get_ui_title(), value="", inline=True)
 
     view = TeamSelectionView(teams)
     await channel.send(embed=embed, view=view)
