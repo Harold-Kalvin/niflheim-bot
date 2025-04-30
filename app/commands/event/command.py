@@ -1,11 +1,14 @@
 import logging
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from discord import Client, Embed, Interaction, Message, TextChannel
+from discord.role import Role
 
 from commands.event.components import TeamSelectionView
 from commands.event.entities import Team
 from constants import PRIMARY_COLOR
+from utils import highligh_role
 
 
 def _parse_date_range(input: str) -> tuple[datetime | None, datetime | None]:
@@ -18,12 +21,17 @@ def _parse_date_range(input: str) -> tuple[datetime | None, datetime | None]:
     return start, end
 
 
-def _parse_teams(input: str) -> list[Team]:
+def _parse_teams(input: str, roles: Sequence[Role]) -> list[Team]:
     teams = []
     for id, team_str in enumerate(input.split(",")):
         team_name, max_members = team_str.split("/")
         teams.append(
-            Team(id=id, name=team_name.strip(), max_members=int(max_members.strip()), members=[])
+            Team(
+                id=id,
+                name=highligh_role(team_name.strip(), roles),
+                max_members=int(max_members.strip()),
+                members=[],
+            )
         )
     return teams
 
@@ -66,7 +74,7 @@ async def event_command(interaction: Interaction, client: Client):
     )
     teams_msg = await client.wait_for("message", check=check_message)
     try:
-        teams = _parse_teams(teams_msg.content)
+        teams = _parse_teams(teams_msg.content, channel.guild.roles)
     except ValueError as e:
         logging.exception(e)
         await dm_channel.send("Wrong format, aborting.")
@@ -74,7 +82,7 @@ async def event_command(interaction: Interaction, client: Client):
 
     embed = Embed(
         title=title_msg.content,
-        description=description_msg.content,
+        description=highligh_role(description_msg.content, channel.guild.roles),
         color=PRIMARY_COLOR,
         timestamp=datetime.now(tz=UTC),
     )
@@ -88,7 +96,7 @@ async def event_command(interaction: Interaction, client: Client):
         embed.add_field(name="To: ", value=f"<t:{end_unix}:F> (<t:{end_unix}:R>)", inline=False)
 
     for team in teams:
-        embed.add_field(name=team.get_ui_title(), value="", inline=True)
+        embed.add_field(name="", value=team.get_ui_value(), inline=True)
 
     view = TeamSelectionView(teams)
     await channel.send(embed=embed, view=view)

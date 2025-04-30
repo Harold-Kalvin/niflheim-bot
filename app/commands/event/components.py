@@ -31,7 +31,7 @@ class TeamSelectionView(View):
                 # 1 -> end date
                 # 2+ -> teams
                 embed_index = 2 + team.id
-                embed.set_field_at(embed_index, name=team.get_ui_title(), value=team.get_ui_value())
+                embed.set_field_at(embed_index, name="", value=team.get_ui_value())
             await message.edit(embed=embed)
 
     def get_user_team(self, user_id: int) -> Team | None:
