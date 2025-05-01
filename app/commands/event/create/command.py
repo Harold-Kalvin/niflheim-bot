@@ -5,8 +5,8 @@ from datetime import UTC, datetime
 from discord import Client, Embed, Interaction, Message, TextChannel
 from discord.role import Role
 
-from commands.event.components import TeamSelectionView
-from commands.event.entities import Team
+from commands.event.create.components import TeamSelectionView
+from commands.event.create.entities import Team
 from constants import PRIMARY_COLOR
 from utils import highligh_role
 
@@ -36,7 +36,7 @@ def _parse_teams(input: str, roles: Sequence[Role]) -> list[Team]:
     return teams
 
 
-async def event_command(interaction: Interaction, client: Client):
+async def create_event(interaction: Interaction, client: Client):
     await interaction.response.defer()
 
     user = interaction.user

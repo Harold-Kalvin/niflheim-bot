@@ -3,7 +3,7 @@ import asyncio
 from discord import Interaction, Message
 from discord.ui import Button, View
 
-from commands.event.entities import Team
+from commands.event.create.entities import Team
 from constants import NUMBER_EMOJIS
 
 

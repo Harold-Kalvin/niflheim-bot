@@ -1,9 +1,7 @@
 import os
 
-from discord import Intents, Interaction
+from discord import Intents
 from discord.ext import commands
-
-from commands.event.command import event_command
 
 TOKEN = os.environ["DISCORD_TOKEN"]
 
@@ -14,12 +12,8 @@ client = commands.Bot(command_prefix="!", intents=intents)
 
 @client.event
 async def on_ready():
+    await client.load_extension("commands.event.group")
     await client.tree.sync()
-
-
-@client.tree.command(name="event", description="Plan an event's teams")
-async def event(interaction: Interaction):
-    await event_command(interaction, client)
 
 
 if __name__ == "__main__":
