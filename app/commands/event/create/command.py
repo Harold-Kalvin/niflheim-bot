@@ -49,14 +49,14 @@ async def create_event(interaction: Interaction, client: Client):
     def check_message(message: Message) -> bool:
         return message.author == user and message.channel == dm_channel
 
-    await dm_channel.send("What is the **title** of your event? (mandatory)")
+    await dm_channel.send("What is the **title** of your event?")
     title_msg = await client.wait_for("message", check=check_message)
 
-    await dm_channel.send("What is the **description** of your event? (mandatory)")
+    await dm_channel.send("What is the **description** of your event?")
     description_msg = await client.wait_for("message", check=check_message)
 
     await dm_channel.send(
-        "What is the **start and end time**? (optional, format: "
+        "What is the **start and end time**? (format: "
         "`2025-04-27T10:33:50Z/2025-04-27T10:33:50Z`, any timezone works. "
         "`None` to ignore)"
     )
@@ -65,19 +65,18 @@ async def create_event(interaction: Interaction, client: Client):
         start, end = _parse_date_range(dates_msg.content)
     except ValueError as e:
         logging.exception(e)
-        await dm_channel.send("Wrong format, aborting.")
+        await dm_channel.send("❌ Wrong format. Aborting.")
         return
 
     await dm_channel.send(
-        "What are the **teams** and their **maximum participants**? "
-        "(mandatory, format: `team1/13, team2/5`)"
+        "What are the **teams** and their **maximum participants**? (format: `team1/13, team2/5`)"
     )
     teams_msg = await client.wait_for("message", check=check_message)
     try:
         teams = _parse_teams(teams_msg.content, channel.guild.roles)
     except ValueError as e:
         logging.exception(e)
-        await dm_channel.send("Wrong format, aborting.")
+        await dm_channel.send("❌ Wrong format. Aborting.")
         return
 
     embed = Embed(
