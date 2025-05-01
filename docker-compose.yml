@@ -6,3 +6,11 @@ services:
     env_file:
       - .env
 
+  redis:
+    image: redis:8.0-rc1-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
