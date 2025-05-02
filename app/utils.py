@@ -21,8 +21,13 @@ async def handle_dm_message(client: Client, user: User | Member, dm_channel) -> 
     return content
 
 
-def highligh_role(text: str, roles: Sequence[Role]) -> str:
+def highlight_mentions(text: str, roles: Sequence[Role], members: Sequence[User | Member]) -> str:
     for role in roles:
         if role.name in text:
             text = text.replace(f"@{role.name}", role.mention)
+
+    for member in members:
+        if member.global_name and member.global_name in text:
+            text = text.replace(f"@{member.global_name}", member.mention)
+
     return text

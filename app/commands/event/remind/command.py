@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from discord import Client, Interaction, TextChannel
 
 from db.models.reminders import create_reminder
-from utils import handle_dm_message, highligh_role
+from utils import handle_dm_message, highlight_mentions
 
 
 async def remind_event(interaction: Interaction, client: Client):
@@ -48,9 +48,9 @@ async def remind_event(interaction: Interaction, client: Client):
     if not role:
         await interaction.followup.send("❌ Command aborted.", ephemeral=True)
         return
-    highlighted_role = highligh_role(role, channel.guild.roles)
+    highlighted_mentions = highlight_mentions(role, channel.guild.roles, channel.guild.members)
 
-    text = f"{highlighted_role} {title} is ending soon (<t:{end_unix}:R>)."
+    text = f"{highlighted_mentions} {title} is ending soon (<t:{end_unix}:R>)."
     reminder = create_reminder(channel.guild.id, text, remind_time, channel.id)
     logging.info("Creating reminder %s", reminder)
 

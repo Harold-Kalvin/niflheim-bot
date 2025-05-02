@@ -2,13 +2,13 @@ import logging
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from discord import Client, Embed, Interaction, TextChannel
+from discord import Client, Embed, Interaction, Member, TextChannel, User
 from discord.role import Role
 
 from commands.event.create.components import TeamSelectionView
 from commands.event.create.entities import Team
 from constants import PRIMARY_COLOR
-from utils import handle_dm_message, highligh_role
+from utils import handle_dm_message, highlight_mentions
 
 
 def _parse_date_range(input: str) -> tuple[datetime | None, datetime | None]:
@@ -21,14 +21,14 @@ def _parse_date_range(input: str) -> tuple[datetime | None, datetime | None]:
     return start, end
 
 
-def _parse_teams(input: str, roles: Sequence[Role]) -> list[Team]:
+def _parse_teams(input: str, roles: Sequence[Role], members: Sequence[User | Member]) -> list[Team]:
     teams = []
     for id, team_str in enumerate(input.split(",")):
         team_name, max_members = team_str.split("/")
         teams.append(
             Team(
                 id=id,
-                name=highligh_role(team_name.strip(), roles),
+                name=highlight_mentions(team_name.strip(), roles, members),
                 max_members=int(max_members.strip()),
                 members=[],
             )
@@ -85,7 +85,7 @@ async def create_event(interaction: Interaction, client: Client):
         return
 
     try:
-        teams = _parse_teams(teams_msg, channel.guild.roles)
+        teams = _parse_teams(teams_msg, channel.guild.roles, channel.guild.members)
     except ValueError as e:
         logging.exception(e)
         await dm_channel.send("❌ Wrong format. Aborting.")
@@ -94,7 +94,7 @@ async def create_event(interaction: Interaction, client: Client):
 
     embed = Embed(
         title=title,
-        description=highligh_role(description, channel.guild.roles),
+        description=highlight_mentions(description, channel.guild.roles, channel.guild.members),
         color=PRIMARY_COLOR,
         timestamp=datetime.now(tz=UTC),
     )

@@ -12,6 +12,7 @@ TOKEN = os.environ["DISCORD_TOKEN"]
 
 intents = Intents.default()
 intents.message_content = True
+intents.members = True
 client = commands.Bot(command_prefix="!", intents=intents)
 
 
