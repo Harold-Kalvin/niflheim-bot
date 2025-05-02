@@ -2,13 +2,13 @@ import logging
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from discord import Client, Embed, Interaction, Message, TextChannel
+from discord import Client, Embed, Interaction, TextChannel
 from discord.role import Role
 
 from commands.event.create.components import TeamSelectionView
 from commands.event.create.entities import Team
 from constants import PRIMARY_COLOR
-from utils import highligh_role
+from utils import handle_dm_message, highligh_role
 
 
 def _parse_date_range(input: str) -> tuple[datetime | None, datetime | None]:
@@ -37,51 +37,64 @@ def _parse_teams(input: str, roles: Sequence[Role]) -> list[Team]:
 
 
 async def create_event(interaction: Interaction, client: Client):
-    await interaction.response.defer()
+    await interaction.response.defer(ephemeral=True)
 
     user = interaction.user
     dm_channel = await user.create_dm()
     channel = interaction.channel
     if not isinstance(channel, TextChannel):
-        await dm_channel.send("The command must be triggered in a text channel.")
+        await interaction.followup.send("❌ The command must be triggered in a text channel.")
         return
 
-    def check_message(message: Message) -> bool:
-        return message.author == user and message.channel == dm_channel
-
     await dm_channel.send("What is the **title** of your event?")
-    title_msg = await client.wait_for("message", check=check_message)
+    title = await handle_dm_message(client, user, dm_channel)
+    if not title:
+        await interaction.followup.send("❌ Command aborted.", ephemeral=True)
+        return
 
     await dm_channel.send("What is the **description** of your event?")
-    description_msg = await client.wait_for("message", check=check_message)
+    description = await handle_dm_message(client, user, dm_channel)
+    if not description:
+        await interaction.followup.send("❌ Command aborted.", ephemeral=True)
+        return
 
     await dm_channel.send(
         "What is the **start and end time**? (format: "
         "`2025-04-27T10:33:50Z/2025-04-27T10:33:50Z`, any timezone works. "
         "`None` to ignore)"
     )
-    dates_msg = await client.wait_for("message", check=check_message)
+    dates = await handle_dm_message(client, user, dm_channel)
+    if not dates:
+        await interaction.followup.send("❌ Command aborted.", ephemeral=True)
+        return
+
     try:
-        start, end = _parse_date_range(dates_msg.content)
+        start, end = _parse_date_range(dates)
     except ValueError as e:
         logging.exception(e)
         await dm_channel.send("❌ Wrong format. Aborting.")
+        await interaction.followup.send("❌ Command aborted.", ephemeral=True)
         return
 
     await dm_channel.send(
         "What are the **teams** and their **maximum participants**? (format: `team1/13, team2/5`)"
     )
-    teams_msg = await client.wait_for("message", check=check_message)
+    teams_msg = await handle_dm_message(client, user, dm_channel)
+    if not teams_msg:
+        await interaction.followup.send("❌ Command aborted.", ephemeral=True)
+        return
+
     try:
-        teams = _parse_teams(teams_msg.content, channel.guild.roles)
+        teams = _parse_teams(teams_msg, channel.guild.roles)
     except ValueError as e:
         logging.exception(e)
         await dm_channel.send("❌ Wrong format. Aborting.")
+        await interaction.followup.send("❌ Command aborted.", ephemeral=True)
         return
 
     embed = Embed(
-        title=title_msg.content,
-        description=highligh_role(description_msg.content, channel.guild.roles),
+        title=title,
+        description=highligh_role(description, channel.guild.roles),
         color=PRIMARY_COLOR,
         timestamp=datetime.now(tz=UTC),
     )
@@ -99,4 +112,4 @@ async def create_event(interaction: Interaction, client: Client):
 
     view = TeamSelectionView(teams)
     await channel.send(embed=embed, view=view)
-    await interaction.followup.send("✅ Event created successfully!")
+    await interaction.followup.send("✅ Event created successfully!", ephemeral=True)
