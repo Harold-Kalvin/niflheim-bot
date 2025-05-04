@@ -3,79 +3,77 @@ import asyncio
 from discord import Interaction, Message
 from discord.ui import Button, View
 
-from commands.event.create.entities import Team
 from constants import NUMBER_EMOJIS
+from db.models.events import get_event_by_id, get_teams_by_event
+from db.models.teams import add_member_to_team, get_team_by_id, remove_member_from_team
 
 
 class TeamSelectionView(View):
-    def __init__(self, teams: list[Team]):
+    def __init__(self, guild_id: int, event_id: str):
         super().__init__(timeout=None)
-        self.teams: dict[int, Team] = {team.id: team for team in teams}
+        self.guild_id = guild_id
+        self.event_id = event_id
         self.lock = asyncio.Lock()
 
-        for id, team in self.teams.items():
-            button = Button(label=NUMBER_EMOJIS[id], custom_id=f"team_{id}")
-            button.callback = self.make_callback(team)
+        sorted_teams = sorted(
+            get_teams_by_event(self.guild_id, self.event_id), key=lambda t: t.number
+        )
+        for team in sorted_teams:
+            button = Button(label=NUMBER_EMOJIS[team.number], custom_id=team.id)
+            button.callback = self.make_callback(team.id)
             self.add_item(button)
 
-    async def update_message_embed(
-        self, message: Message | None, teams_to_update: list[Team] | None = None
-    ):
-        if message and message.embeds:
-            embed = message.embeds[0]
-            if teams_to_update is None:
-                teams_to_update = list(self.teams.values())
+    async def refresh_ui(self, message: Message | None):
+        if not message or not message.embeds:
+            return
 
-            for team in teams_to_update:
-                # 0 -> start date
-                # 1 -> end date
-                # 2+ -> teams
-                embed_index = 2 + team.id
-                embed.set_field_at(embed_index, name="", value=team.get_ui_value())
+        embed = message.embeds[0]
+        if event := get_event_by_id(self.guild_id, self.event_id):
+            for team_id in event.team_ids:
+                if team := get_team_by_id(self.guild_id, team_id):
+                    # embed field indexes:
+                    # - 0 -> start date
+                    # - 1 -> end date
+                    # - 2+ -> teams
+                    embed_index = team.number
+                    embed_index += 1 if event.start else 0
+                    embed_index += 1 if event.end else 0
+
+                    if message.guild:
+                        global_names = {m.id: m.global_name for m in message.guild.members}
+                        embed.set_field_at(
+                            embed_index, name="", value=team.get_ui_value(global_names)
+                        )
+
             await message.edit(embed=embed)
 
-    def get_user_team(self, user_id: int) -> Team | None:
-        for team in self.teams.values():
-            if user_id in team.member_ids:
-                return team
-        return None
-
-    def make_callback(self, new_team: Team):
+    def make_callback(self, team_id: str):
         async def callback(interaction: Interaction):
-            await interaction.response.defer()
+            await interaction.response.defer(ephemeral=True)
             async with self.lock:
-                user = interaction.user
+                user_id = interaction.user.id
                 message = interaction.message
 
-                # user leaves his current team
-                current_team = self.get_user_team(user.id)
-                if current_team and current_team.id == new_team.id:
-                    current_team.members = [
-                        member for member in current_team.members if member.id != user.id
-                    ]
-                    self.teams[current_team.id] = current_team
-                    await self.update_message_embed(message)
+                team = get_team_by_id(self.guild_id, team_id)
+                if not team:
+                    await interaction.followup.send("❌ Team not found.", ephemeral=True)
                     return
 
-                # destination team is full, do nothing
-                if len(new_team.members) >= new_team.max_members:
-                    await interaction.followup.send("The team is full!", ephemeral=True)
+                # user clicked on team he is already part of => leaves
+                if user_id in team.member_ids:
+                    remove_member_from_team(self.guild_id, team.id, user_id)
+                    await self.refresh_ui(message)
                     return
 
-                # at this point, user will switch teams
-                # remove user from all teams
-                teams_to_update = []
-                for id, team in self.teams.items():
-                    if any(member.id == user.id for member in team.members):
-                        self.teams[id].members = [
-                            member for member in team.members if member.id != user.id
-                        ]
-                        teams_to_update.append(self.teams[id])
+                if team.is_full:
+                    await interaction.followup.send("❌ Team is full.", ephemeral=True)
+                    return
 
-                # add user to new team
-                self.teams[new_team.id].members.append(user)
-                teams_to_update.append(self.teams[new_team.id])
+                # at this point, user switches teams
+                for team in get_teams_by_event(self.guild_id, self.event_id):
+                    remove_member_from_team(self.guild_id, team.id, user_id)
 
-                await self.update_message_embed(message, teams_to_update)
+                add_member_to_team(self.guild_id, team_id, user_id)
+                await self.refresh_ui(message)
 
         return callback

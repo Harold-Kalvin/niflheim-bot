@@ -7,7 +7,7 @@ from db.models.reminders import create_reminder
 from utils import handle_dm_message, highlight_mentions
 
 
-async def remind_event(interaction: Interaction, client: Client):
+async def run_remind_event_command(interaction: Interaction, client: Client):
     await interaction.response.defer(ephemeral=True)
 
     user = interaction.user

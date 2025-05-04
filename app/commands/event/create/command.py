@@ -1,13 +1,12 @@
 import logging
-from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from discord import Client, Embed, Interaction, Member, TextChannel, User
-from discord.role import Role
+from discord import Client, Embed, Guild, Interaction, TextChannel
 
 from commands.event.create.components import TeamSelectionView
-from commands.event.create.entities import Team
 from constants import PRIMARY_COLOR
+from db.models.events import create_event
+from db.models.teams import Team, create_teams
 from utils import handle_dm_message, highlight_mentions
 
 
@@ -21,22 +20,51 @@ def _parse_date_range(input: str) -> tuple[datetime | None, datetime | None]:
     return start, end
 
 
-def _parse_teams(input: str, roles: Sequence[Role], members: Sequence[User | Member]) -> list[Team]:
-    teams = []
-    for id, team_str in enumerate(input.split(",")):
+def _parse_teams(input: str, guild: Guild) -> list[Team]:
+    teams_data = []
+    for number, team_str in enumerate(input.split(",")):
         team_name, max_members = team_str.split("/")
-        teams.append(
-            Team(
-                id=id,
-                name=highlight_mentions(team_name.strip(), roles, members),
-                max_members=int(max_members.strip()),
-                members=[],
-            )
+        highlighted_team_name = highlight_mentions(team_name.strip(), guild.roles, guild.members)
+        stripped_max_members = int(max_members.strip())
+        teams_data.append(
+            {"name": highlighted_team_name, "number": number, "max_members": stripped_max_members}
         )
-    return teams
+    return create_teams(guild.id, teams_data)
 
 
-async def create_event(interaction: Interaction, client: Client):
+def _create_embed(
+    channel: TextChannel,
+    title: str,
+    description: str,
+    start: datetime | None,
+    end: datetime | None,
+    teams: list[Team],
+) -> Embed:
+    embed = Embed(
+        title=title,
+        description=highlight_mentions(description, channel.guild.roles, channel.guild.members),
+        color=PRIMARY_COLOR,
+        timestamp=datetime.now(tz=UTC),
+    )
+
+    if start:
+        start_unix = int(start.timestamp())
+        embed.add_field(
+            name="From: ", value=f"<t:{start_unix}:F> (<t:{start_unix}:R>)", inline=False
+        )
+
+    if end:
+        end_unix = int(end.timestamp())
+        embed.add_field(name="Until: ", value=f"<t:{end_unix}:F> (<t:{end_unix}:R>)", inline=False)
+
+    for team in teams:
+        global_names = {m.id: m.global_name for m in channel.guild.members}
+        embed.add_field(name="", value=team.get_ui_value(global_names), inline=True)
+
+    return embed
+
+
+async def run_create_event_command(interaction: Interaction, client: Client):
     await interaction.response.defer(ephemeral=True)
 
     user = interaction.user
@@ -46,9 +74,9 @@ async def create_event(interaction: Interaction, client: Client):
         await interaction.followup.send("❌ The command must be triggered in a text channel.")
         return
 
-    await dm_channel.send("What is the **title** of your event?")
-    title = await handle_dm_message(client, user, dm_channel)
-    if not title:
+    await dm_channel.send("What is the **name** of your event?")
+    name = await handle_dm_message(client, user, dm_channel)
+    if not name:
         await interaction.followup.send("❌ Command aborted.", ephemeral=True)
         return
 
@@ -85,31 +113,15 @@ async def create_event(interaction: Interaction, client: Client):
         return
 
     try:
-        teams = _parse_teams(teams_msg, channel.guild.roles, channel.guild.members)
+        teams = _parse_teams(teams_msg, channel.guild)
     except ValueError as e:
         logging.exception(e)
         await dm_channel.send("❌ Wrong format. Aborting.")
         await interaction.followup.send("❌ Command aborted.", ephemeral=True)
         return
 
-    embed = Embed(
-        title=title,
-        description=highlight_mentions(description, channel.guild.roles, channel.guild.members),
-        color=PRIMARY_COLOR,
-        timestamp=datetime.now(tz=UTC),
-    )
-
-    if start and end:
-        start_unix = int(start.timestamp())
-        end_unix = int(end.timestamp())
-        embed.add_field(
-            name="From: ", value=f"<t:{start_unix}:F> (<t:{start_unix}:R>)", inline=False
-        )
-        embed.add_field(name="To: ", value=f"<t:{end_unix}:F> (<t:{end_unix}:R>)", inline=False)
-
-    for team in teams:
-        embed.add_field(name="", value=team.get_ui_value(), inline=True)
-
-    view = TeamSelectionView(teams)
+    event = create_event(channel.guild.id, name, start, end, [team.id for team in teams])
+    embed = _create_embed(channel, name, description, start, end, teams)
+    view = TeamSelectionView(channel.guild.id, event.id)
     await channel.send(embed=embed, view=view)
     await interaction.followup.send("✅ Event created successfully!", ephemeral=True)

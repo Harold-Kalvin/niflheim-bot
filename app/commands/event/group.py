@@ -1,8 +1,8 @@
 from discord import Interaction, app_commands
 from discord.ext import commands
 
-from commands.event.create.command import create_event
-from commands.event.remind.command import remind_event
+from commands.event.create.command import run_create_event_command
+from commands.event.remind.command import run_remind_event_command
 
 
 class EventGroup(commands.Cog):
@@ -13,11 +13,11 @@ class EventGroup(commands.Cog):
 
     @event.command(name="create", description="Create a new event")
     async def create(self, interaction: Interaction):
-        await create_event(interaction, self.bot)
+        await run_create_event_command(interaction, self.bot)
 
     @event.command(name="remind", description="Remind when an event ends in an hour")
     async def remind(self, interaction: Interaction):
-        await remind_event(interaction, self.bot)
+        await run_remind_event_command(interaction, self.bot)
 
 
 async def setup(bot: commands.Bot):
