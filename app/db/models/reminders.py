@@ -4,6 +4,8 @@ from uuid import uuid4
 
 from db.client import redis_client
 
+REMINDER_DATA_KEY = "{guild_id}:reminder:{reminder_id}:data"  # hash
+
 
 @dataclass()
 class Reminder:
@@ -19,7 +21,7 @@ class Reminder:
 
 def create_reminder(guild_id: int, text: str, remind_time: datetime, channel_id: int) -> Reminder:
     id = str(uuid4())
-    key = f"{guild_id}:reminder:{id}"
+    key = REMINDER_DATA_KEY.format(guild_id=guild_id, reminder_id=id)
     redis_client.hset(
         key,
         mapping={
@@ -38,7 +40,7 @@ def create_reminder(guild_id: int, text: str, remind_time: datetime, channel_id:
 
 
 def get_reminders(guild_id: int) -> list[Reminder]:
-    pattern = f"{guild_id}:reminder:*"
+    pattern = REMINDER_DATA_KEY.format(guild_id=guild_id, reminder_id="*")
     keys = redis_client.scan_iter(match=pattern)
     reminders = []
     for key in keys:
@@ -58,5 +60,5 @@ def get_reminders(guild_id: int) -> list[Reminder]:
 
 
 def mark_reminder_as_processed(guild_id: int, reminder_id: str):
-    key = f"{guild_id}:reminder:{reminder_id}"
+    key = REMINDER_DATA_KEY.format(guild_id=guild_id, reminder_id=reminder_id)
     redis_client.hset(key, "processed", "1")
