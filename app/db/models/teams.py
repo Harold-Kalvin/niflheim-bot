@@ -28,11 +28,11 @@ class Team:
             f"{NUMBER_EMOJIS[self.number]} {self.name} ({len(self.member_ids)}/{self.max_members})"
         )
 
-    def get_ui_value(self, member_global_names: dict[int, str | None]) -> str:
+    def get_ui_value(self, member_names: dict[int, str]) -> str:
         value = self.title
         if self.member_ids:
             value += "\n"
-            value += "\n".join(f"> {member_global_names[id]}" for id in self.member_ids)
+            value += "\n".join(f"> {member_names[id]}" for id in self.member_ids)
         return value
 
 

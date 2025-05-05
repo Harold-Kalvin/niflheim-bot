@@ -40,9 +40,9 @@ class TeamSelectionView(View):
                     embed_index += 1 if event.end else 0
 
                     if message.guild:
-                        global_names = {m.id: m.global_name for m in message.guild.members}
+                        display_names = {m.id: m.display_name for m in message.guild.members}
                         embed.set_field_at(
-                            embed_index, name="", value=team.get_ui_value(global_names)
+                            embed_index, name="", value=team.get_ui_value(display_names)
                         )
 
             await message.edit(embed=embed)

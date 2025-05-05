@@ -58,8 +58,8 @@ def _create_embed(
         embed.add_field(name="Until: ", value=f"<t:{end_unix}:F> (<t:{end_unix}:R>)", inline=False)
 
     for team in teams:
-        global_names = {m.id: m.global_name for m in channel.guild.members}
-        embed.add_field(name="", value=team.get_ui_value(global_names), inline=True)
+        display_names = {m.id: m.display_name for m in channel.guild.members}
+        embed.add_field(name="", value=team.get_ui_value(display_names), inline=True)
 
     return embed
 

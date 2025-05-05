@@ -27,7 +27,7 @@ def highlight_mentions(text: str, roles: Sequence[Role], members: Sequence[User 
             text = text.replace(f"@{role.name}", role.mention)
 
     for member in members:
-        if member.global_name and member.global_name in text:
-            text = text.replace(f"@{member.global_name}", member.mention)
+        if member.display_name and member.display_name in text:
+            text = text.replace(f"@{member.display_name}", member.mention)
 
     return text
