@@ -16,8 +16,8 @@ class InfoGroup(commands.Cog):
         await run_create_info_command(interaction, self.bot)
 
     @event.command(name="show", description="Show an information")
-    async def remind(self, interaction: Interaction):
-        await run_show_info_command(interaction, self.bot)
+    async def show(self, interaction: Interaction, id: str):
+        await run_show_info_command(interaction, self.bot, id)
 
 
 async def setup(bot: commands.Bot):

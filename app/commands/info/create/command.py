@@ -14,6 +14,12 @@ async def run_create_info_command(interaction: Interaction, client: Client):
         await interaction.followup.send("❌ The command must be triggered in a text channel.")
         return
 
+    await dm_channel.send("What is the **id** of your info?")
+    info_id = await handle_dm_message(client, user, dm_channel)
+    if not info_id:
+        await interaction.followup.send("❌ Command aborted.", ephemeral=True)
+        return
+
     await dm_channel.send("What is the **title** of your info?")
     title = await handle_dm_message(client, user, dm_channel)
     if not title:
@@ -26,5 +32,5 @@ async def run_create_info_command(interaction: Interaction, client: Client):
         await interaction.followup.send("❌ Command aborted.", ephemeral=True)
         return
 
-    create_info(channel.guild.id, title, description)
+    create_info(channel.guild.id, info_id, title, description)
     await interaction.followup.send("✅ Info created successfully!", ephemeral=True)
