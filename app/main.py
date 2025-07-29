@@ -20,6 +20,7 @@ client = commands.Bot(command_prefix="!", intents=intents)
 @client.event
 async def on_ready():
     await client.load_extension("commands.event.group")
+    await client.load_extension("commands.info.group")
     await client.tree.sync()
 
     # restore persistent views
