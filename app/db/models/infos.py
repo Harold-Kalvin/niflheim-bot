@@ -31,3 +31,19 @@ def get_info_by_id(guild_id: int, id: str) -> Info | None:
         title=data[b"title"].decode(),  # pyright: ignore[reportIndexIssue]
         description=data[b"description"].decode(),  # pyright: ignore[reportIndexIssue]
     )
+
+
+def get_infos(guild_id: int) -> list[Info]:
+    pattern = INFO_DATA_KEY.format(guild_id=guild_id, info_id="*")
+    data_keys = redis_client.scan_iter(match=pattern)
+    infos = []
+    for data_key in data_keys:
+        data = redis_client.hgetall(data_key)
+        infos.append(
+            Info(
+                id=data[b"id"].decode(),  # pyright: ignore[reportIndexIssue]
+                title=data[b"title"].decode(),  # pyright: ignore[reportIndexIssue]
+                description=data[b"description"].decode(),  # pyright: ignore[reportIndexIssue]
+            )
+        )
+    return infos
